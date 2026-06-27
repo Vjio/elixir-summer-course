@@ -93,14 +93,24 @@ defmodule School.State do
         do: :correct,
         else: :incorrect
 
+    new_combo =
+      if decision == :correct do
+        Map.get(player, :combo, 0) + 1
+      else
+        0
+      end
+
     score_delta =
       if decision == :correct,
-        do: 1,
+        do: 1 * new_combo,
         else: -1
 
     new_score = max(player.score + score_delta, 0)
 
-    updated_player = Map.put(player, :score, new_score)
+    updated_player =
+      player
+      |> Map.put(:score, new_score)
+      |> Map.put(:combo, new_combo)
 
     updated_player_list = [updated_player | remaining_players]
 

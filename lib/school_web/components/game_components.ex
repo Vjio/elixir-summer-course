@@ -3,6 +3,7 @@ defmodule SchoolWeb.GameComponents do
 
   attr :player_name, :string, required: true
   attr :score, :integer, required: true
+  attr :combo, :integer, required: false
 
   def score_banner(assigns) do
     ~H"""
@@ -13,6 +14,11 @@ defmodule SchoolWeb.GameComponents do
           <div class="player-name">Inspector {@player_name}</div>
           <div class="player-role">Senior Postal Officer</div>
         </div>
+      </div>
+      <div class="combo-display">
+        <span class="score-label">Combo</span>
+        <span class="score-value">{@combo}</span>
+        <span class="score-unit">pts</span>
       </div>
       <div class="score-display">
         <span class="score-label">Score</span>
