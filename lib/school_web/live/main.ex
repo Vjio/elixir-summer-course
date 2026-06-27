@@ -61,6 +61,19 @@ defmodule SchoolWeb.MainLive do
   end
 
   @impl true
+  def handle_event("new_match", _params, socket) do
+    # when starting a new match, we go to the state before "ready"
+    local_player = socket.assigns.local_player
+    {updated_local_player, game_state} = State.reset_player(local_player.name)
+
+    new_socket =
+      socket
+      |> assign(:local_player, updated_local_player)
+
+    {:noreply, new_socket}
+  end
+
+  @impl true
   def handle_event("approve", _params, socket) do
     new_socket = validation("swipe-right", :valid, socket)
 
@@ -81,6 +94,15 @@ defmodule SchoolWeb.MainLive do
 
   @impl true
   def handle_info({:game_start, game_state}, socket) do
+    new_socket =
+      socket
+      |> assign(:game_state, game_state)
+
+    {:noreply, new_socket}
+  end
+
+  @impl true
+  def handle_info({:game_reset, game_state}, socket) do
     new_socket =
       socket
       |> assign(:game_state, game_state)

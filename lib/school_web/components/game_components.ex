@@ -219,7 +219,7 @@ defmodule SchoolWeb.GameComponents do
 
   def match_end_overlay(assigns) do
     ~H"""
-    <div class="match-end-overlay" style="display:flex">
+    <div id="match-end-overlay" class="match-end-overlay" style="display:flex">
       <div class="match-end-card">
         <div class="match-end-label">Match Complete</div>
         <div class="match-end-title">Final Results</div>
@@ -229,7 +229,9 @@ defmodule SchoolWeb.GameComponents do
             <span class="final-score">{player.score} pts</span>
           </li>
         </ul>
-        <button class="btn-new-match">New Match</button>
+        <button phx-click="new_match" class="btn-new-match">
+          New Match
+        </button>
       </div>
     </div>
     """

@@ -17,7 +17,7 @@ defmodule School.State do
     :rule9,
     :rule10
   ]
-  @max_game_time_seconds 240
+  @max_game_time_seconds 2
 
   defstruct active_rules: [],
             players: [],
@@ -52,6 +52,41 @@ defmodule School.State do
     GenServer.call(__MODULE__, {:update_player_score, pid, package, expected})
   end
 
+  def reset_player(name) do
+    GenServer.call(__MODULE__, {:reset_player, name})
+  end
+
+  @impl true
+  def handle_call({:reset_player, name}, _from, state) do
+    {[player], remaining_players} =
+      Enum.split_with(state.players, fn player -> player.name == name end)
+
+    updated_player = Map.put(player, :ready?, false)
+    updated_player_list = [updated_player | remaining_players]
+    game_state = maybe_start_game(updated_player_list, state)
+
+    new_state =
+      state
+      |> Map.put(:players, updated_player_list)
+      |> Map.put(:game_state, game_state)
+      |> Map.put(:current_game_time, 0)
+      |> Map.put(:active_rules, [])
+
+    Phoenix.PubSub.broadcast(
+      School.PubSub,
+      "game_room",
+      {:update_player_list, sort_by_score(updated_player_list)}
+    )
+
+    Phoenix.PubSub.broadcast(
+      School.PubSub,
+      "game_room",
+      :update_rules
+    )
+
+    {:reply, {updated_player, game_state}, new_state}
+  end
+
   @impl true
   def handle_call({:player_ready, name}, _from, state) do
     {[player], remaining_players} =
@@ -59,7 +94,7 @@ defmodule School.State do
 
     readied_player = Map.put(player, :ready?, true)
     updated_player_list = [readied_player | remaining_players]
-    game_state = maybe_start_game(updated_player_list)
+    game_state = maybe_start_game(updated_player_list, state)
 
     new_state =
       state
@@ -155,6 +190,10 @@ defmodule School.State do
 
   @impl true
   def handle_info(:tick, state) do
+    # capture last tick after game has ended
+    if state.game_state == :waiting do
+      {:noreply, state}
+    else
     Process.send_after(self(), :tick, 1_000)
 
     current_game_time = state.current_game_time
@@ -178,18 +217,23 @@ defmodule School.State do
         state
       end
 
-    if current_game_time > @max_game_time_seconds do
-      Phoenix.PubSub.broadcast(
-        School.PubSub,
-        "game_room",
-        {:game_ended, :ended}
-      )
-    end
+    state_after_time_check =
+      if current_game_time > @max_game_time_seconds do
+        Phoenix.PubSub.broadcast(
+          School.PubSub,
+          "game_room",
+          {:game_ended, :ended}
+        )
+        Map.put(state_with_new_rule, :game_state, :ended)
+      else
+        state_with_new_rule
+      end
 
     new_state =
-      Map.put(state_with_new_rule, :current_game_time, current_game_time + 1)
+      Map.put(state_after_time_check, :current_game_time, current_game_time + 1)
 
     {:noreply, new_state}
+    end
   end
 
   # handle killed PID
@@ -239,7 +283,7 @@ defmodule School.State do
     Enum.sort(player_list, fn p1, p2 -> p1.score > p2.score end)
   end
 
-  defp maybe_start_game(player_list) do
+  defp maybe_start_game(player_list, state) do
     all_ready? = Enum.all?(player_list, fn player -> player.ready? end)
 
     if all_ready? do
@@ -253,6 +297,14 @@ defmodule School.State do
 
       :in_progress
     else
+      # announce players that game has been reset
+      if state.game_state == :ended do
+      Phoenix.PubSub.broadcast(
+        School.PubSub,
+        "game_room",
+        {:game_reset, :waiting}
+      )
+      end
       :waiting
     end
   end
