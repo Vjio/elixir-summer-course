@@ -4,12 +4,14 @@ defmodule School.Player do
           score: integer(),
           combo: integer(),
           pid: pid(),
-          ready?: boolean()
+          ready?: boolean(),
+          queue: list()
         }
 
   defstruct name: nil,
             score: 0,
             combo: 0,
             pid: nil,
-            ready?: false
+            ready?: false,
+            queue: []
 end

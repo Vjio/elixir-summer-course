@@ -93,6 +93,7 @@ defmodule SchoolWeb.MainLive do
     # if queue.notEmpty()
     # package = queue.pop()
     # else:
+    
     package = Logic.generate_package()
 
     new_socket =
