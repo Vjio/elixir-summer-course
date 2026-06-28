@@ -82,7 +82,7 @@ defmodule SchoolWeb.MainLive do
 
     # an unlucky player might join right as the "new match" button is hit
     # he doesn't have a name or state yet so he doesn't have to reset anything
-    if local_player != nil do
+    if local_player != nil and local_player.ready? do
 
     {updated_local_player, game_state} = State.reset_player(local_player.name,
       socket.assigns.game_state)
@@ -188,6 +188,7 @@ defmodule SchoolWeb.MainLive do
   end
 
   def handle_info({:update_player_list, updated_player_list}, socket) do
+    IO.inspect(updated_player_list, label: "updated player list")
     new_socket =
       socket
       |> assign(:player_list, updated_player_list)
