@@ -17,7 +17,7 @@ defmodule School.State do
     :rule9,
     :rule10
   ]
-  @max_game_time_seconds 2
+  @max_game_time_seconds 10
 
   defstruct active_rules: [],
             players: [],
@@ -30,6 +30,10 @@ defmodule School.State do
   @impl true
   def init(state) do
     {:ok, state}
+  end
+
+  def start_new_match() do
+    GenServer.cast(__MODULE__, :start_new_match)
   end
 
   def enqueue_player_queue(name, package) do
@@ -66,6 +70,37 @@ defmodule School.State do
 
   def reset_player(name, game_state) do
     GenServer.call(__MODULE__, {:reset_player, name, game_state})
+  end
+
+  @imple true
+  def handle_cast(:start_new_match, state) do
+    updated_players = reset_all_players(state.players)
+
+    new_state = %{state | players: updated_players, current_game_time: 0, active_rules: []}
+
+    # update socket
+    Phoenix.PubSub.broadcast(
+      School.PubSub,
+      "game_room",
+      :new_match)
+
+    # update players
+    Phoenix.PubSub.broadcast(
+      School.PubSub,
+      "game_room",
+      {:update_player_list, updated_players})
+
+    # update rules
+    Phoenix.PubSub.broadcast(
+      School.PubSub,
+      "game_room",
+      :update_rules)
+
+    {:noreply, new_state}
+  end
+
+  defp reset_all_players(players) do
+    Enum.map(players, fn player -> %{player | combo: 0, ready?: false, queue: []} end)
   end
 
   @impl true
@@ -251,7 +286,7 @@ defmodule School.State do
   @impl true
   def handle_info(:tick, state) do
     # capture last tick after game has ended
-    if state.game_state == :waiting do
+    if state.game_state == :waiting  || state.game_state == :ended do
       {:noreply, state}
     else
     Process.send_after(self(), :tick, 1_000)

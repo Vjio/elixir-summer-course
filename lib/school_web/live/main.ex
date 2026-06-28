@@ -43,6 +43,7 @@ defmodule SchoolWeb.MainLive do
 
   @impl true
   def handle_event("ready", _params, socket) do
+    IO.inspect("ready")
     local_player = socket.assigns.local_player
     {updated_local_player, _game_state} = State.player_ready(local_player.name,
       socket.assigns.game_state)
@@ -63,38 +64,21 @@ defmodule SchoolWeb.MainLive do
 
   @impl true
   def handle_event("new_match", _params, socket) do
-    # when starting a new match, we go to the state before "ready"
-    local_player = socket.assigns.local_player
-    {updated_local_player, game_state} = State.reset_player(local_player.name,
-      socket.assigns.game_state)
+    # when starting a new match, every player has to go to state before "ready"
+    State.start_new_match()
 
-    new_socket =
-      socket
-      |> assign(:local_player, updated_local_player)
-
-    {:noreply, new_socket}
+    {:noreply, socket}
   end
 
   @impl true
   def handle_info(:new_match, socket) do
-    # when starting a new match, we go to the state before "ready"
-    local_player = socket.assigns.local_player
-
-    # an unlucky player might join right as the "new match" button is hit
-    # he doesn't have a name or state yet so he doesn't have to reset anything
-    if local_player != nil and local_player.ready? do
-
-    {updated_local_player, game_state} = State.reset_player(local_player.name,
-      socket.assigns.game_state)
-
+    IO.inspect("new match")
+    # reset socket to waiting
     new_socket =
       socket
-      |> assign(:local_player, updated_local_player)
+      |> assign(:game_state, :waiting)
 
     {:noreply, new_socket}
-    else
-    {:noreply, socket}
-    end
   end
 
   @impl true
@@ -165,6 +149,7 @@ defmodule SchoolWeb.MainLive do
 
   @impl true
   def handle_info({:tick_update, current_game_time}, socket) do
+    IO.inspect("tick update")
     width = build_game_time_loading_bar(current_game_time)
 
     new_socket =
@@ -187,11 +172,18 @@ defmodule SchoolWeb.MainLive do
     {:noreply, new_socket}
   end
 
+  @impl true
   def handle_info({:update_player_list, updated_player_list}, socket) do
-    IO.inspect(updated_player_list, label: "updated player list")
+    IO.inspect("update player list")
+
+    local_player = Enum.find(updated_player_list, fn player ->
+      socket.assigns.local_player && player.name == socket.assigns.local_player.name
+    end)
+
     new_socket =
       socket
       |> assign(:player_list, updated_player_list)
+      |> assign(:local_player, local_player)
 
     {:noreply, new_socket}
   end
