@@ -36,8 +36,8 @@ defmodule School.State do
     GenServer.call(__MODULE__, {:add_player, name, pid})
   end
 
-  def player_ready(name) do
-    GenServer.call(__MODULE__, {:player_ready, name})
+  def player_ready(name, game_state) do
+    GenServer.call(__MODULE__, {:player_ready, name, game_state})
   end
 
   def set_random_rule do
@@ -52,18 +52,18 @@ defmodule School.State do
     GenServer.call(__MODULE__, {:update_player_score, pid, package, expected})
   end
 
-  def reset_player(name) do
-    GenServer.call(__MODULE__, {:reset_player, name})
+  def reset_player(name, game_state) do
+    GenServer.call(__MODULE__, {:reset_player, name, game_state})
   end
 
   @impl true
-  def handle_call({:reset_player, name}, _from, state) do
+  def handle_call({:reset_player, name, game_state}, _from, state) do
     {[player], remaining_players} =
       Enum.split_with(state.players, fn player -> player.name == name end)
 
     updated_player = Map.put(player, :ready?, false)
     updated_player_list = [updated_player | remaining_players]
-    game_state = maybe_start_game(updated_player_list, state)
+    game_state = maybe_start_game(updated_player_list, state, game_state)
 
     new_state =
       state
@@ -84,17 +84,23 @@ defmodule School.State do
       :update_rules
     )
 
+    Phoenix.PubSub.broadcast(
+      School.PubSub,
+      "game_room",
+      :new_match
+    )
+
     {:reply, {updated_player, game_state}, new_state}
   end
 
   @impl true
-  def handle_call({:player_ready, name}, _from, state) do
+  def handle_call({:player_ready, name, game_state}, _from, state) do
     {[player], remaining_players} =
       Enum.split_with(state.players, fn player -> player.name == name end)
 
     readied_player = Map.put(player, :ready?, true)
     updated_player_list = [readied_player | remaining_players]
-    game_state = maybe_start_game(updated_player_list, state)
+    game_state = maybe_start_game(updated_player_list, state, game_state)
 
     new_state =
       state
@@ -283,7 +289,7 @@ defmodule School.State do
     Enum.sort(player_list, fn p1, p2 -> p1.score > p2.score end)
   end
 
-  defp maybe_start_game(player_list, state) do
+  defp maybe_start_game(player_list, state, game_state) do
     all_ready? = Enum.all?(player_list, fn player -> player.ready? end)
 
     if all_ready? do
@@ -298,7 +304,7 @@ defmodule School.State do
       :in_progress
     else
       # announce players that game has been reset
-      if state.game_state == :ended do
+      if game_state == :ended do
       Phoenix.PubSub.broadcast(
         School.PubSub,
         "game_room",

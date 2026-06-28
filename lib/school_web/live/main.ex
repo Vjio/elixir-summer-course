@@ -44,7 +44,8 @@ defmodule SchoolWeb.MainLive do
   @impl true
   def handle_event("ready", _params, socket) do
     local_player = socket.assigns.local_player
-    {updated_local_player, _game_state} = State.player_ready(local_player.name)
+    {updated_local_player, _game_state} = State.player_ready(local_player.name,
+      socket.assigns.game_state)
 
     new_socket =
       socket
@@ -64,7 +65,22 @@ defmodule SchoolWeb.MainLive do
   def handle_event("new_match", _params, socket) do
     # when starting a new match, we go to the state before "ready"
     local_player = socket.assigns.local_player
-    {updated_local_player, game_state} = State.reset_player(local_player.name)
+    {updated_local_player, game_state} = State.reset_player(local_player.name,
+      socket.assigns.game_state)
+
+    new_socket =
+      socket
+      |> assign(:local_player, updated_local_player)
+
+    {:noreply, new_socket}
+  end
+
+  @impl true
+  def handle_info(:new_match, socket) do
+    # when starting a new match, we go to the state before "ready"
+    local_player = socket.assigns.local_player
+    {updated_local_player, game_state} = State.reset_player(local_player.name,
+      socket.assigns.game_state)
 
     new_socket =
       socket
