@@ -17,7 +17,7 @@ defmodule School.State do
     :rule9,
     :rule10
   ]
-  @max_game_time_seconds 2
+  @max_game_time_seconds 200
 
   defstruct active_rules: [],
             players: [],
