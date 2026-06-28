@@ -5,7 +5,7 @@ defmodule School.Player do
           combo: integer(),
           pid: pid(),
           ready?: boolean(),
-          queue: list(Package.t())
+          queue: list(School.Package.t())
         }
 
   defstruct name: nil,
