@@ -32,16 +32,16 @@ defmodule School.State do
     {:ok, state}
   end
 
-  def add_packet_to_player_queue(pid, package) do
-    GenServer.call(__MODULE__, {:add_packet_to_player_queue, pid, package})
+  def add_packet_to_player_queue(name, package) do
+    GenServer.call(__MODULE__, {:add_packet_to_player_queue, name, package})
   end
 
-  def remove_packet_from_player_queue(pid) do
-    GenServer.call(__MODULE__, {:remove_packet_from_player_queue, pid})
+  def remove_packet_from_player_queue(name) do
+    GenServer.call(__MODULE__, {:remove_packet_from_player_queue, name})
   end
 
-  def get_player_queue(pid) do
-    GenServer.call(__MODULE__, {:get_player_queue, pid})
+  def get_player_queue(name) do
+    GenServer.call(__MODULE__, {:get_player_queue, name})
   end
 
   def add_player(name, pid) do
@@ -69,9 +69,9 @@ defmodule School.State do
   end
 
   @impl true
-  def handle_call({:add_packet_to_player_queue, pid, package}, _from, state) do
+  def handle_call({:add_packet_to_player_queue, name, package}, _from, state) do
     {[player], remaining_players} =
-      Enum.split_with(state.players, fn player -> player.pid == pid end)
+      Enum.split_with(state.players, fn player -> player.name == name end)
     updated_queue = player.queue ++ [package]
     updated_player = Map.put(player, :queue, updated_queue)
     updated_player_list = [updated_player | remaining_players]
@@ -80,19 +80,20 @@ defmodule School.State do
   end
 
   @impl true
-  def handle_call({:get_player_queue, pid}, _from, state) do
+  def handle_call({:get_player_queue, name}, _from, state) do
     {[player], _remaining_players} =
-      Enum.split_with(state.players, fn player -> player.pid == pid end)
+      Enum.split_with(state.players, fn player -> player.name == name end)
 
     {:reply, player.queue, state}
   end
 
   @impl true
-  def handle_call({:remove_packet_from_player_queue, pid}, _from, state) do
+  def handle_call({:remove_packet_from_player_queue, name}, _from, state) do
     {[player], remaining_players} =
-      Enum.split_with(state.players, fn player -> player.pid == pid end)
+      Enum.split_with(state.players, fn player -> player.name == name end)
 
-    updated_player = Map.put(player, :queue, [])
+    new_queue = tl(player.queue)
+    updated_player = Map.put(player, :queue, new_queue)
     updated_player_list = [updated_player | remaining_players]
 
     {:reply, {updated_player, updated_player_list}, state}
@@ -158,9 +159,9 @@ defmodule School.State do
   end
 
   @impl true
-  def handle_call({:update_player_score, pid, package, expected}, _from, state) do
+  def handle_call({:update_player_score, name, package, expected}, _from, state) do
     {[player], remaining_players} =
-      Enum.split_with(state.players, fn player -> player.pid == pid end)
+      Enum.split_with(state.players, fn player -> player.name == name end)
 
     {validation_result, validation_msg} =
       Logic.validate(package, state.active_rules)
