@@ -97,20 +97,28 @@ defmodule SchoolWeb.MainLive do
   end
 
   @impl true
-  def handle_event("toss_packet", _params, socket) do
-    # todo: add gen server functions for sending a packet to player
+  def handle_event("toss_packet", %{"target_player" => player_name}, socket) do
+    # tell genserver to add current packet to player's queue
+    State.enqueue_player_queue(player_name, socket.assigns.package)
+
+    # send current player a new packet
+    Process.send_after(self(), :next_package, 200)
 
     {:noreply, socket}
   end
 
   @impl true
   def handle_info(:next_package, socket) do
-    # TODO: add queue logic
-    # if queue.notEmpty()
-    # package = queue.pop()
-    # else:
-    
-    package = Logic.generate_package()
+    # check internal queue to see if player has been tossed any packets
+    queue_top = State.dequeue_player_queue(socket.assigns.local_player.name)
+
+    package =
+      if queue_top == nil do
+        # if not, generate a new packet
+        Logic.generate_package()
+      else
+        queue_top
+      end
 
     new_socket =
       socket
