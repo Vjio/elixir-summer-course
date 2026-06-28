@@ -141,6 +141,10 @@ defmodule SchoolWeb.GameComponents do
               Toss Packet!
             </button>
           </form>
+
+          <button phx-click="new_rule" class="btn btn-new_rule">
+            New Rule!
+          </button>
         </div>
       </div>
     </div>

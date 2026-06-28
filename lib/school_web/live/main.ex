@@ -89,6 +89,23 @@ defmodule SchoolWeb.MainLive do
   end
 
   @impl true
+  def handle_event("new_rule", _params, socket) do
+    #doube player combo
+    new_combo = State.double_combo(self())
+
+    new_player = Map.put(socket.assigns.local_player, :combo, new_combo)
+
+    new_socket =
+      socket
+      |> assign(:local_player, new_player)
+
+    # set random new rule
+    State.set_random_rule()
+
+    {:noreply, new_socket}
+  end
+
+  @impl true
   def handle_event("toss_packet", %{"target_player" => player_name}, socket) do
     # tell genserver to add current packet to player's queue
     State.enqueue_player_queue(player_name, socket.assigns.package)

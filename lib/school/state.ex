@@ -4,7 +4,7 @@ defmodule School.State do
   alias School.Player
   alias School.Logic
 
-  @max_active_rules 5
+  @max_active_rules 10
   @available_rules [
     :rule1,
     :rule2,
@@ -17,7 +17,7 @@ defmodule School.State do
     :rule9,
     :rule10
   ]
-  @max_game_time_seconds 10
+  @max_game_time_seconds 200
 
   defstruct active_rules: [],
             players: [],
@@ -30,6 +30,10 @@ defmodule School.State do
   @impl true
   def init(state) do
     {:ok, state}
+  end
+
+  def double_combo(pid) do
+    GenServer.call(__MODULE__, {:double_combo, pid})
   end
 
   def start_new_match() do
@@ -109,6 +113,18 @@ defmodule School.State do
       Enum.split_with(state.players, fn player -> player.name == name end)
 
     {:reply, player.queue, state}
+  end
+
+  @impl true
+  def handle_call({:double_combo, pid}, _from, state) do
+    {[player], remaining_players} =
+      Enum.split_with(state.players, fn player -> player.pid == pid end)
+
+    updated_player = Map.put(player, :combo, player.combo * 2)
+
+    new_state = Map.put(state, :players, [updated_player | remaining_players])
+
+    {:reply, updated_player.combo, new_state}
   end
 
   @impl true
@@ -301,11 +317,6 @@ defmodule School.State do
 
     state_with_new_rule =
       if rem(current_game_time, 30) == 0 do
-        Phoenix.PubSub.broadcast(
-          School.PubSub,
-          "game_room",
-          :update_rules
-        )
 
         maybe_activate_random_rule(state)
       else
@@ -370,6 +381,13 @@ defmodule School.State do
 
     new_state =
       Map.put(state, :active_rules, [new_rule | active_rules])
+
+      Phoenix.PubSub.broadcast(
+        School.PubSub,
+        "game_room",
+        :update_rules
+      )
+
 
     new_state
   end
