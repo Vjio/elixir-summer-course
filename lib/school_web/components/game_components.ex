@@ -44,6 +44,8 @@ defmodule SchoolWeb.GameComponents do
   attr :package, :map, required: true
   attr :timestamp, :integer, required: true
   attr :validation_result, :atom, required: true
+  attr :player_list, :list, required: false, default: []
+  attr :player_name, :string, required: false, default: nil
 
   def package_inspection_form(assigns) do
     ~H"""
@@ -122,6 +124,23 @@ defmodule SchoolWeb.GameComponents do
           <button phx-click="approve" class="btn btn-approve">
             <span class="btn-icon">✓</span> Approve
           </button>
+
+          <form phx-submit="toss_packet" class="toss-form" style="display: flex; gap: 5px;">
+            <select name="target_player" required class="player-select">
+              <option value="" disabled selected>Choose target</option>
+              <option
+                :for={player <- @player_list}
+                :if={player.name != @player_name}
+                value={player.name}
+              >
+                {player.name}
+              </option>
+            </select>
+
+            <button type="submit" class="btn btn-toss-packet">
+              Toss Packet!
+            </button>
+          </form>
         </div>
       </div>
     </div>

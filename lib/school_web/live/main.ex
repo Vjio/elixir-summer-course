@@ -84,7 +84,7 @@ defmodule SchoolWeb.MainLive do
   def handle_event("toss_packet", _params, socket) do
     # todo: add gen server functions for sending a packet to player
 
-    {:noreply, new_socket}
+    {:noreply, socket}
   end
 
   @impl true
